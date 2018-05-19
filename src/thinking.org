@@ -1,0 +1,36 @@
+ Seq (C "VAR" (QT (\t -> t == "Foo")) (ChangeType "Boo"))
+               (Seq (C "MI"  (QN (\n -> n == "getFooNum")) (ChangeName "getBooNum"))
+                   (Seq (C "MI"  (QN (\n -> n == "setFooNum")) (ChangeName "setBooNum"))
+                       (Seq  (C "VAR" (QT (\t -> t == "int")) (ChangeType "double"))
+                        (C "MTHDRT"  (QT (\t -> t == "Foo")) (ChangeType "Boo")))))
+
+
+Ref->type t . mi <ret,n,[p]>
+
+
+Ref | type :: t  == "Foo" >> ChangeType "Boo"
+    |  MI  :: n == "getFooName" >> ChangeName "getBooName"
+           :: p[0] | type :: t == "int" >> ChangeType "double"
+
+
+VAR  V Foo >>  VAR ChangeType Boo ........  V Boo
+
+
+LCMatcher varDeclMatcher =  
+         <VAR|Type> == Foo -> ChangeType Boo
+
+LCMatcher mthdDeclMatcher = 
+         <MD|ReturnType> == Foo -> ChangeType Boo
+
+LCMatcher ExprMatcher = 
+         refExpMatcher ++ miMatcher
+
+ExpMatcher refExpMatcher =
+              <Ref|Type> == Foo -> Identity
+
+ExpMatcher miMatcher = 
+              <MI|Name> == getFooName  -> ChangeName  getBooName)
+            &&(<MI|Ref>.refExpMatcher)
+
+ExpMatcher ncMatcher = 
+               <NC|Type> == Foo -> ChangeType Boo
