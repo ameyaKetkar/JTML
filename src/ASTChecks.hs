@@ -32,6 +32,9 @@ checkEqualParamArg (S ((t1,(M_D _ _ x)),(t2,M_D _ _ y))) = testCondition ((lengt
 checkEqualParamArg (E ((t1,(M_I _ _ x)),(t2,M_I _ _ y))) = testCondition ((length x) == (length y)) paramArgNotEqual
 checkEqualParamArg _                                     = []
 
+checkNothingBlank :: M -> [String]
+checkNothingBlank (T (x,y) m) = typeNamesNotBlank (x,y) ++ concat (map cNE m)
+
 astChecks :: M -> [String]
-astChecks(T (x,y) m) = typeNamesNotBlank (x,y) ++ concat (map cNE m) ++ concat (map checkEqualParamArg m)
+astChecks a@(T (x,y) m) = (checkNothingBlank a)  ++ concat (map checkEqualParamArg m)
 
