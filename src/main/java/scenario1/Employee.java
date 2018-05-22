@@ -1,4 +1,4 @@
-package scenarios.scenario1;
+package scenario1;
 
 import java.util.List;
 
