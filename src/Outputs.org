@@ -1,0 +1,61 @@
+
+** 1
+#+BEGIN_SRC haskell
+
+fooToBooM :: M
+fooToBooM =(("foo","boo"), [(ALLOCATION,CT To "boo" ),
+                            (CALLSITE "getFoo", (Seq (CN "getBoo") (CT Receiver "boo")))
+-- Output
+(("foo","boo"),
+[((ClassDecl "foo" [("foo",("getFoo",("int",[]))), ("foo",("setFoo",("void",["int"]))), ("foo",("getFoo1",("int",[]))),("foo",("equals",("bool",["int"])))],Nothing),[DO_NOT_MIGRATE]),
+
+((CallSite ("foo",("setFoo",("void",["int"]))),Nothing),[DO_NOT_MIGRATE]),
+
+((CallSite ("foo",("getFoo1",("int",[]))),Nothing),[DO_NOT_MIGRATE]),
+((CallSite ("foo",("equals",("bool",["int"]))),Just (CallSite ("boo",("equals",("bool",["int"]))))),[CT Receiver "boo"]),
+
+((Allocation "foo",Just (Allocation "boo")),[CT To "boo"]),
+
+((CallSite ("foo",("getFoo",("int",[]))),Just (CallSite ("boo",("getBoo",("int",[]))))),[CN "getBoo",CT Receiver "boo"])])
+#+END_SRC
+
+** 2 
+#+BEGIN_SRC haskell 
+fooToBooM2 :: M
+fooToBooM2 =(("foo","boo"), [(ALLOCATION,CT To "boo" ),
+                           (CALLSITE "getFoo", ((CN  Name "getBoo") `Seq` (CT Receiver "boo"))),
+                           (CLSDECL,((CT (OveridenMthd "getFoo" ReturnType) "boo") `Seq`(CN  (OveridenMthd "getFoo" Name ) "getBoo"))),
+                           (CLSDECL ,CT SubType "boo")
+                           ])
+
+(("foo","boo"),
+[
+((Allocation "foo",Just (Allocation "boo")),[CT To "boo"]),
+
+((ClassDecl "foo" [MethodDeclaration ("foo",("getFoo",("int",[]))),
+MethodDeclaration ("foo",("setFoo",("void",["int"]))),
+MethodDeclaration ("foo",("getFoo1",("int",[]))),
+MethodDeclaration ("foo",("equals",("bool",["int"])))],
+Just
+(ClassDecl "boo" [MethodDeclaration ("boo",("getBoo",("boo",[]))),
+MethodDeclaration ("boo",("setFoo",("void",["int"]))),
+MethodDeclaration ("boo",("getFoo1",("int",[]))),
+MethodDeclaration ("boo",("equals",("bool",["int"])))])),
+
+[CT (OveridenMthd "getFoo" ReturnType) "boo",CN (OveridenMthd "getFoo" Name) "getBoo",CT SubType "boo",DONT_MIGRAtE "setFoo",DONT_MIGRAtE "getFoo1",DONT_MIGRAtE 
+"equals"]),
+---------
+((CallSite ("foo",("getFoo",("int",[]))),
+Just 
+(CallSite ("boo",("getBoo" ,("int",[]))))),
+[CN Name "getBoo",CT Receiver "boo"]),(
+
+(CallSite ("foo",("setFoo" ,("void",["int"]))),
+Just 
+(CallSite ("boo",("setBoo" ,("void",["int"]))))),
+[CN Name "setBoo",CT Receiver "boo"]),
+
+((CallSite ("foo",("getFoo1",("int",[])))     ,Nothing),[DO_NOT_MIGRATE]),
+((CallSite ("foo",("equals" ,("bool",["int"]))),Nothing),[DO_NOT_MIGRATE])
+])
+#+END_SRC

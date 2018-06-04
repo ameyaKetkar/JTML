@@ -1,30 +1,86 @@
 
 ** Flow 
- M -> ASTChecks ? -> Msem -> SemanticChecks -> induceChanges 
 
-   fooToBooM = Type foo -> boo map :
-                  MD (getFoo (foo[]))     -> (getBoo (boo [])),
-                  MD (setFoo (void[foo])) -> (setBoo (void[boo]))
-                  VD foo -> boo            1
-                  ID foo -> boo            
-                  MI (getFoo(foo[])) -> (getBoo(boo[]))
 
-   fooToBooM = Type foo -> boo map :
-                  MD (getFoo (foo[]))     -> (getBoo (boo [])),
-                  MD (setFoo (void[foo])) -> (setBoo (void[boo]))
-                  MD (getFooVal (double []))  -> (getBooVal (long [])),
-                  MD (setFooVal (void[double])) -> (setBooVal(void[long]))
-                  VD foo -> boo            
-                  ID foo -> boo            
-                  MI (getFoo(foo[])) -> (getBoo(boo[]))
-                  MI (setFoo(void[foo])) -> (getBoo(void[boo]))
-                  MI (getFooVal(double[])) -> (getBoo(long[]))
-                  MI (setFoo(void[double])) -> (getBoo(void[long]))            
-    
-    
-            
+** Examples           
+*** Example1
+
+
+   fooToBooM = Migrate  foo -> boo 
+                  MI getFoo    >> CN getBoo
+                  MI setFoo    >> CN setBoo
+                  MI getFooVal >> CN getBooVal
+                  MI setFooVal >> CN setBooVal;CT Arg 0 long
+                  Decl foo     >> boo
+               and Migrate double -> long
+                  Decl double >> long
+  
+**** Output
+   
+     MI getFoo(foo[])) -> MI getBoo(boo[]))  | CN getBoo 
+     MI setFoo(void[foo])) -> MI getBoo(void[boo])) | CN setBoo
+     MI getFooVal(double[])) -> MI getBooVal(long[])) | CN getBooVal
+     MI setFooVal(void[double])) -> MI setBooVal(void[long])) | CN setBooVal
+     DECL foo -> boo | CT boo
+     DECL double -> long | CT long
+     MI getFooId (int[]) -> NoMapping
+     MI getName  (String[]) -> Identity
+
+*** Example 2
+
+   fooToBooM = Migrate  foo -> boo 
+                  MI getFoo    >> CN getBoo
+                  MI setFoo    >> CN setBoo
+                  MI getFooVal >> CN getBooVal
+                  MI setFooVal >> CN setBooVal;Cast Arg 0 long
+                  Decl foo     >> boo
+              
+**** Output  
+     TD Foo to TD Boo
+       MI getFoo(foo[])) -> MI getBoo(boo[]))  | CN getBoo 
+       MI setFoo(void[foo])) -> MI getBoo(void[boo])) | CN setBoo
+       MI getFooVal(double[])) -> MI getBooVal(long[])) | CN getBooVal
+       MI setFooVal(void[double])) -> MI setBooVal(void[long]))|CN setBooVal; Cast long
+       DECL foo -> boo | CT boo
+       MI getFooId (int[]) -> NoMapping | NOMAPPING
+       MI getName  (String[]) -> MI getName (String[]) | IDENTITY 
+
+
+<MEthod>
+<name> blah </name>
+<>
+</Method>
+
 ** AST Checks 
 *** Check no entry in the mapping is blank 
 *** Check if the methods have equal number of parameters 
 ** Semantic checks 
 *** Check if every method declaration or invocation belongs to the type it says it belongs to
+
+
+#+BEGIN_SRC haskell
+type M = ((TypeName,TypeName),[(ConstructKind,Chng)])
+
+generatePossibleConstructs :: Type -> [Construct]
+
+type C = [(Construct -> Construct,Chng)]
+
+type Msem = ((Type,Type),[(Construct ,C)])
+
+type Mthd = (TypeName,(Name,(TypeName, [TypeName]))
+
+type ResMapping = [((Construct,Maybe Construct),[Chng])]
+
+type Res =( (Type,Type),ResMapping)
+
+( ALLOCATION >> Chng To "boo" )
+(CALLSITE "getFoo">> Chng  Name "getBoo" ; Chng ReceiverType "boo")
+(CALLSITE "setFoo">> Chng  Name "setBoo"; (Chng ReceiverType "boo"),
+(CLSDECL >> (For OveridenMthd "getFoo" :
+                  Chng  ReturnType "boo" ; 
+                  Chng Name "getBoo");
+            (Chng SubType "boo"))
+                           
+
+
+#+END_SRC
