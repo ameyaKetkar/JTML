@@ -1,15 +1,24 @@
-module NewAST where
+module AST where
 
 type TypeName = String
 type Name = String
 type LCTransform = (ConstructKind,Chng)
 
 data Chng = Seq Chng Chng
-         | For SubConstruct Chng
+         | E SubConstruct (String -> String)
          | C SubConstruct String
          | DO_NOT_MIGRATE
          | DONT_MIGRAtE String
-        deriving (Show)
+         | IDENTITY
+--        deriving (Show)
+
+instance Show Chng where
+  show (Seq c1 c2) = show c1 ++ "; " ++ show c2
+  show (E s f) = "Edit: " ++ show s ++ " Some pattern"
+  show (C s t) = "Change: " ++ show s ++ " " ++ t
+  show (DONT_MIGRAtE m) = "DO NOT MIGRATE " ++ m
+  show (DO_NOT_MIGRATE) = "DO NOT MIGRATE "
+  show (IDENTITY)       = "IDENTITY"
 
 data SubConstruct = ReturnType
                    | Param Int
@@ -26,7 +35,7 @@ data SubConstruct = ReturnType
 
 type M = ((TypeName,TypeName),[LCTransform])
 
-data ConstructKind = CLSDECL | ALLOCATION | CALLSITE String  | NEW_CLASS
+data ConstructKind = CLSDECL | ALLOCATION | CALLSITE [String]  | NEW_CLASS
                    deriving (Show)
 
 

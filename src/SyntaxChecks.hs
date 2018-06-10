@@ -1,6 +1,6 @@
 module SyntaxChecks where
-import NewAST
-import NewSemantic
+import AST
+import Semantic
 import Data.Maybe
 
 validateSyntax :: (M,TypeDirectory) -> Bool
@@ -20,7 +20,8 @@ validSubConstructs (CALLSITE s,Name) = True
 validSubConstructs (CALLSITE s,(Arg i)) = True
 validSubConstructs (CALLSITE s,Receiver) = True
 validSubConstructs (CALLSITE s,MethodInvc) = True
-validSubConstructs (CALLSITE s,_) = error ("Invalid callsite subconstruct ... " ++ s)
+validSubConstructs (CALLSITE s,ReturnType) = True
+validSubConstructs (CALLSITE s,_) = error ("Invalid callsite subconstruct ... " ++ concat s)
 validSubConstructs (CLSDECL ,SubType) = True
 validSubConstructs (CLSDECL ,o@(OveridenMthd s c)) = validSubSubConstructs o
 validSubConstructs (CLSDECL ,_) = error " Invalid Class declaration subconstruct"
@@ -43,4 +44,5 @@ getTypeNamesUsed m = catMaybes (concatMap (\x -> getTypeChanges (snd x))  (snd m
 
 getTypeChanges :: Chng -> [Maybe String]
 getTypeChanges (C s n) = if (isTypeChange s) then [Just n] else [Nothing]
+getTypeChanges (E s n) =  [Nothing]
 getTypeChanges (Seq c1 c2) = getTypeChanges c1 ++ getTypeChanges c2

@@ -1,26 +1,21 @@
-module NewTranslator where
+module ManageChange where
 
-import NewSemantic
-import NewAST
+import AST
+import Semantic
 import Util
+import Data.Maybe
 
-
-
-getTypesInContext :: (M,TypeDirectory) -> (Type,Type)
-getTypesInContext (m,dir) = mapTuple (getTypeFromName dir) (fst m)
-
-translateToConstruct :: Type -> ConstructKind -> Construct
-translateToConstruct  t (CALLSITE m)  = case (getMthdWithName (getMethods_Type t) m) of Just x -> CallSite x
-                                                                                        Nothing -> error "Method Not Found"
-translateToConstruct  t ALLOCATION  = Allocation (getTypeName t)
-translateToConstruct  t CLSDECL = head (getClassDecl t)
-
-translateToChange :: Chng -> C
-translateToChange c@(C  s n2)    = if (isTypeChange s) then [(changeType n2 s,c)] else [(changeName n2 s,c)]
-translateToChange (Seq c1 c2)  = translateToChange c1 ++ translateToChange c2
 
 renameMethod :: Name -> Mthd -> Mthd
-renameMethod n m = (updtSnd.updtFst) (\x -> n) m 
+renameMethod n m = (updtSnd.updtFst) (\x -> n) m
+
+
+editMethodName :: (String -> String)->Mthd ->  Mthd
+editMethodName f m= (updtSnd.updtFst) f m
+
+updtRetType :: Mthd -> TypeName -> Mthd
+updtRetType (t1,(n,(t2,x))) t =   (t1,(n,(t,x)))
+
 
 changeRetType :: TypeName -> Mthd -> Mthd
 changeRetType tn m =  (updtSnd.updtSnd.updtFst) (\x -> tn) m
@@ -43,6 +38,11 @@ changeNameOfOverridenMethods nw mn (x@(MethodDeclaration m):ms) = if (getMthdNam
   ((MethodDeclaration (renameMethod nw m)):ms) else (x:(changeNameOfOverridenMethods nw mn ms))
 changeNameOfOverridenMethods tn n []  = []
 
+editNameOfOverridenMethods :: (Name -> Name) -> Name -> [Construct] -> [Construct]
+editNameOfOverridenMethods nw mn (x@(MethodDeclaration m):ms) = if (getMthdName m == mn) then
+  ((MethodDeclaration (editMethodName nw m)):ms) else (x:(editNameOfOverridenMethods nw mn ms))
+editNameOfOverridenMethods tn n []  = []
+
 changeTypeNamesInOverridenMethod :: TypeName -> Construct -> Construct
 changeTypeNamesInOverridenMethod t( MethodDeclaration m)  = MethodDeclaration (t,snd m)
 changeTypeNamesInOverridenMethod t _ = error "change type names in method cannot be applied"
@@ -53,6 +53,12 @@ changeName n  Name  (MethodDeclaration m) = MethodDeclaration (renameMethod n m)
 changeName n  (OveridenMthd nm Name) (ClassDecl t ms) = (ClassDecl t  (changeNameOfOverridenMethods n nm ms))
 changeName n _ _ = error "ChangeName cannot be applied"
 
+editName ::  (Name -> Name) -> SubConstruct ->  Construct -> Construct
+editName n   Name  (CallSite m)  = CallSite (editMethodName n m)
+editName n   Name  (MethodDeclaration m) = MethodDeclaration (editMethodName n m)
+editName n  (OveridenMthd nm Name) (ClassDecl t ms) = (ClassDecl t  (editNameOfOverridenMethods n nm ms))
+editName n _ _ = error "ChangeName cannot be applied"
+
 
 changeType :: TypeName -> SubConstruct -> Construct -> Construct
 changeType t To (Allocation t1) = Allocation t
@@ -61,11 +67,27 @@ changeType t Receiver (CallSite m) = CallSite (t,snd m)
 changeType t a@(Arg i) (CallSite m) = CallSite (changeArgType t a m)
 changeType t SubType (ClassDecl t2 m) = (ClassDecl t (map (changeTypeNamesInOverridenMethod t) m))
 changeType t (OveridenMthd n ReturnType) (ClassDecl t2 m) =  (ClassDecl t  (changeRetTypeInOverridenMethod t n m))
-changeType t (OveridenMthd n (Param i)) (ClassDecl t2 m) =  (ClassDecl t  (map (\z -> if(getMthdDeclName z == n) then changeParamType t i z else z) m))
+changeType t (OveridenMthd n (Param i)) (ClassDecl t2 m) =  (ClassDecl t  (map (\z -> if(getMthdDeclName1 z == n) then changeParamType t i z else z) m))
 changeType t _ _ = error "Operation not supported"
 
-getMthdDeclName (MethodDeclaration m) = getMthdName m
 
-type ResMapping = [((Construct,Maybe Construct),[Chng])]
 
-type Res =( (Type,Type),ResMapping)
+applySeq :: C -> Construct -> Construct
+applySeq (x:xs) c = applySeq xs ((fst x) c)
+applySeq [] c = c
+
+
+getChanges :: C -> [Chng]
+getChanges xs = map (\x -> snd x) xs
+
+chngForOvrdnMthd :: Chng -> Maybe String
+chngForOvrdnMthd (C (OveridenMthd n _ ) _ ) = Just n
+chngForOvrdnMthd _ = Nothing
+
+getChngdOvrdnMthd :: [Chng] -> [String]
+getChngdOvrdnMthd a = catMaybes (map (\x -> chngForOvrdnMthd x) a)
+
+getDontMigrateMthdName :: [Chng] -> [String]
+getDontMigrateMthdName ((DONT_MIGRAtE s):ms) = (s:(getDontMigrateMthdName ms))
+getDontMigrateMthdName (_:ms) = (getDontMigrateMthdName ms)
+getDontMigrateMthdName [] = []

@@ -1,6 +1,6 @@
-module NewErrors where
+module Errors where
 
-import NewSemantic
+import Semantic
 
 invalidCallsite :: Mthd -> String
 invalidCallsite m =  "invalid Callsite generated for "++ (getMthdName m) ++
